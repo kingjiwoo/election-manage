@@ -12,21 +12,23 @@ router = APIRouter(prefix="/api/report", tags=["report"])
 @router.post("")
 async def generate_report(
     candidate_name: str = "후보",
+    llm: str = "claude",
     db: AsyncSession = Depends(get_db),
 ):
-    """전략 리포트 생성 (전체 텍스트)"""
-    content = await report_service.generate(db, candidate_name)
-    return {"data": {"report": content}, "error": None, "meta": {}}
+    """전략 리포트 생성. llm: claude | gpt | gemini"""
+    content = await report_service.generate(db, candidate_name, llm)
+    return {"data": {"report": content, "llm": llm}, "error": None, "meta": {}}
 
 
 @router.post("/stream")
 async def generate_report_stream(
     candidate_name: str = "후보",
+    llm: str = "claude",
     db: AsyncSession = Depends(get_db),
 ):
-    """전략 리포트 스트리밍 생성 (SSE)"""
+    """전략 리포트 스트리밍. llm: claude | gpt | gemini"""
     async def event_stream():
-        async for chunk in report_service.generate_stream(db, candidate_name):
+        async for chunk in report_service.generate_stream(db, candidate_name, llm):
             yield chunk
 
     return StreamingResponse(event_stream(), media_type="text/plain; charset=utf-8")

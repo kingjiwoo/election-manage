@@ -6,10 +6,17 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function ReportPage() {
   const [candidateName, setCandidateName] = useState("");
+  const [selectedLlm, setSelectedLlm] = useState("claude");
   const [report, setReport] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
+
+  const LLM_OPTIONS = [
+    { value: "claude", label: "Claude", sub: "claude-sonnet-4-6" },
+    { value: "gpt", label: "GPT", sub: "gpt-4o" },
+    { value: "gemini", label: "Gemini", sub: "gemini-2.0-flash" },
+  ];
 
   async function generateReport() {
     const name = candidateName.trim() || "후보";
@@ -19,7 +26,7 @@ export default function ReportPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/api/report/stream?candidate_name=${encodeURIComponent(name)}`,
+        `${API_BASE}/api/report/stream?candidate_name=${encodeURIComponent(name)}&llm=${selectedLlm}`,
         { method: "POST" }
       );
 
@@ -52,7 +59,7 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white">
+    <div className="flex flex-col flex-1 min-h-0 bg-gray-900 text-white">
       {/* 헤더 */}
       <header className="px-6 py-4 border-b border-gray-700 flex items-center gap-4">
         <h1 className="text-xl font-bold">유세 전략 리포트</h1>
@@ -73,6 +80,27 @@ export default function ReportPage() {
               placeholder="김철수"
               className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
             />
+          </div>
+
+          {/* LLM 선택 */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5">LLM 선택</label>
+            <div className="flex flex-col gap-1.5">
+              {LLM_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSelectedLlm(opt.value)}
+                  className={`flex items-center justify-between px-3 py-2 rounded border text-sm transition-colors ${
+                    selectedLlm === opt.value
+                      ? "border-blue-500 bg-blue-500/10 text-blue-300"
+                      : "border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500"
+                  }`}
+                >
+                  <span className="font-medium">{opt.label}</span>
+                  <span className="text-xs text-gray-500">{opt.sub}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <button
@@ -101,7 +129,6 @@ export default function ReportPage() {
 
           <div className="mt-auto text-xs text-gray-500 space-y-1">
             <p>· 등록된 유세지 스코어 데이터 기반</p>
-            <p>· Claude claude-sonnet-4-6 모델 사용</p>
             <p>· 스코어 갱신 후 생성 권장</p>
           </div>
         </aside>

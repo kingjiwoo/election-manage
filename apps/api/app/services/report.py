@@ -1,17 +1,15 @@
-"""Claude API 기반 유세 전략 리포트 생성 서비스"""
+"""전략 리포트 생성 서비스 (멀티 LLM)"""
 import logging
 from typing import AsyncIterator
 
-import anthropic
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.models.campaign_spot import CampaignSpot
+from app.services.llm import get_provider
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-sonnet-4-6"
 MAX_SPOTS_IN_PROMPT = 10
 
 
@@ -26,17 +24,16 @@ def _build_prompt(spots: list[CampaignSpot], candidate_name: str) -> str:
         f"- {s.name} (스코어 {s.score:.2f} | 혼잡도 {s.congestion_score or 0:.2f} | 인구 {s.population_score or 0:.2f} | 방문패널티 {s.visit_penalty:.2f})"
         for s in top_spots
     )
-
-    unscored = [s for s in spots if s.score is None]
+    unscored = len([s for s in spots if s.score is None])
 
     return f"""당신은 선거 캠프 전략 전문가입니다.
 아래 데이터를 바탕으로 {candidate_name} 후보의 유세 전략 리포트를 작성해주세요.
 
 ## 유세지 스코어 상위 {len(top_spots)}곳
-{spot_lines}
+{spot_lines if spot_lines else "스코어 데이터 없음 — 먼저 스코어를 갱신해주세요."}
 
 ## 미산정 유세지
-{len(unscored)}곳 (아직 스코어 데이터 없음)
+{unscored}곳
 
 ---
 다음 항목으로 리포트를 작성해주세요:
@@ -51,65 +48,34 @@ def _build_prompt(spots: list[CampaignSpot], candidate_name: str) -> str:
 
 
 class ReportService:
-    def __init__(self):
-        self._client: anthropic.AsyncAnthropic | None = None
-
-    @property
-    def client(self) -> anthropic.AsyncAnthropic:
-        if self._client is None:
-            self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-        return self._client
 
     async def generate(
         self,
         db: AsyncSession,
         candidate_name: str = "후보",
+        llm: str = "claude",
     ) -> str:
-        """전략 리포트 생성 (전체 텍스트 반환)"""
-        if not settings.anthropic_api_key:
-            return "ANTHROPIC_API_KEY가 설정되지 않았습니다."
-
         result = await db.execute(select(CampaignSpot))
         spots = list(result.scalars().all())
-
         if not spots:
             return "등록된 유세지가 없습니다. 먼저 유세지를 등록하고 스코어를 갱신해주세요."
-
-        prompt = _build_prompt(spots, candidate_name)
-
-        message = await self.client.messages.create(
-            model=MODEL,
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return message.content[0].text
+        provider = get_provider(llm)
+        return await provider.generate(_build_prompt(spots, candidate_name))
 
     async def generate_stream(
         self,
         db: AsyncSession,
         candidate_name: str = "후보",
+        llm: str = "claude",
     ) -> AsyncIterator[str]:
-        """전략 리포트 스트리밍 생성"""
-        if not settings.anthropic_api_key:
-            yield "ANTHROPIC_API_KEY가 설정되지 않았습니다."
-            return
-
         result = await db.execute(select(CampaignSpot))
         spots = list(result.scalars().all())
-
         if not spots:
             yield "등록된 유세지가 없습니다."
             return
-
-        prompt = _build_prompt(spots, candidate_name)
-
-        async with self.client.messages.stream(
-            model=MODEL,
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}],
-        ) as stream:
-            async for text in stream.text_stream:
-                yield text
+        provider = get_provider(llm)
+        async for chunk in provider.stream(_build_prompt(spots, candidate_name)):
+            yield chunk
 
 
 report_service = ReportService()

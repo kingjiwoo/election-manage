@@ -68,7 +68,7 @@ export default function MapPage() {
   const topSpots = [...spots].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 10);
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
+    <div className="flex flex-1 min-h-0 bg-gray-900 text-white">
       {/* 사이드바 */}
       <aside className="w-72 flex flex-col border-r border-gray-700">
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">

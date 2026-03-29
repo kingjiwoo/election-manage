@@ -16,6 +16,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "greenlet>=3.3.2",
     "anthropic>=0.86.0",
+    "openai>=2.30.0",
+    "google-generativeai>=0.8.6",
 ]
 
 [project.optional-dependencies]

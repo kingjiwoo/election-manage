@@ -62,7 +62,7 @@ export default function OrgPage() {
   }, {}) ?? {};
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white">
+    <div className="flex flex-col flex-1 min-h-0 bg-gray-900 text-white">
       {/* 헤더 */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
         <h1 className="text-xl font-bold">조직 인맥 트리</h1>
