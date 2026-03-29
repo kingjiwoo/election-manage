@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.campaign_spot import CampaignSpot
 from app.services.tmap import tmap_service
+from app.services.scoring import scoring_service
 
 router = APIRouter(prefix="/api/spots", tags=["spots"])
 
@@ -60,6 +61,40 @@ async def create_spot(body: SpotCreate, db: AsyncSession = Depends(get_db)):
     db.add(spot)
     await db.commit()
     await db.refresh(spot)
+    return {"data": SpotResponse.model_validate(spot), "error": None, "meta": {}}
+
+
+@router.post("/score-all")
+async def score_all(db: AsyncSession = Depends(get_db)):
+    """전체 유세지 스코어 일괄 갱신"""
+    spots = await scoring_service.score_all(db)
+    return {
+        "data": [SpotResponse.model_validate(s) for s in spots],
+        "error": None,
+        "meta": {"updated": len(spots)},
+    }
+
+
+@router.post("/{spot_id}/score")
+async def score_spot(
+    spot_id: int,
+    district_code: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """단일 유세지 스코어 갱신"""
+    spot = await db.get(CampaignSpot, spot_id)
+    if not spot:
+        raise HTTPException(status_code=404, detail="유세지를 찾을 수 없습니다.")
+    spot = await scoring_service.score_spot(db, spot, district_code)
+    return {"data": SpotResponse.model_validate(spot), "error": None, "meta": {}}
+
+
+@router.post("/{spot_id}/visit")
+async def mark_visited(spot_id: int, db: AsyncSession = Depends(get_db)):
+    """방문 처리"""
+    spot = await scoring_service.mark_visited(db, spot_id)
+    if not spot:
+        raise HTTPException(status_code=404, detail="유세지를 찾을 수 없습니다.")
     return {"data": SpotResponse.model_validate(spot), "error": None, "meta": {}}
 
 
