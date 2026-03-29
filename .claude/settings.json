@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
+        "command": "cd apps/api && uv run python -m py_compile $(git diff --name-only HEAD | grep '\\.py$') 2>/dev/null || true"
+      }]
+    }]
+  }
+}
