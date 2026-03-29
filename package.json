@@ -1,0 +1,12 @@
+{
+  "name": "election-manage",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "build:web": "pnpm --filter web build",
+    "typecheck": "pnpm --filter web typecheck"
+  }
+}
