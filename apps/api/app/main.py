@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.neo4j import close_driver
+from app.routers import spots, population
 
 
 @asynccontextmanager
@@ -26,6 +27,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(spots.router)
+app.include_router(population.router)
 
 
 @app.get("/health")
